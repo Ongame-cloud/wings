@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -154,6 +155,8 @@ func (c *Client) Log(containerID, serverUUID, serverName, message string, extra 
 		ServerName:  serverName,
 		Extra:       extra,
 	}
+
+	log.Println("[VictoriaLogs] Queuing log entry for container", containerID)
 
 	select {
 	case c.buffer <- entry:
