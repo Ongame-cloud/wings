@@ -91,12 +91,13 @@ func (e *Environment) Attach(ctx context.Context) error {
 			e.logCallbackMx.Lock()
 			defer e.logCallbackMx.Unlock()
 
-			if vlClient := victorialogs.GetGlobal(); vlClient != nil {
-				serverName := ""
+			if vl := victorialogs.GetGlobal(); vl != nil {
+				log.WithField("container_id", e.Id).Debug("forwarding log line to victorialogs")
+				serverName := "unknown"
 				if e.Configuration != nil {
 					serverName = e.Configuration.GetEnvironmentVariable("SERVER_NAME")
 				}
-				vlClient.Log(e.Id, e.Id, serverName, string(v), nil)
+				vl.Log(e.Id, e.Id, serverName, string(v), nil)
 			}
 
 			e.logCallback(v)
@@ -345,6 +346,12 @@ func (e *Environment) Readlog(lines int) ([]string, error) {
 	for scanner.Scan() {
 		out = append(out, scanner.Text())
 	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	log.WithField("lines", len(out)).Debug("read container logs")
 
 	return out, nil
 }

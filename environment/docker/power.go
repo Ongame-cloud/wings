@@ -13,6 +13,7 @@ import (
 
 	"github.com/pterodactyl/wings/environment"
 	"github.com/pterodactyl/wings/remote"
+	"github.com/pterodactyl/wings/victorialogs"
 )
 
 // OnBeforeStart run before the container starts and get the process
@@ -92,6 +93,31 @@ func (e *Environment) Start(ctx context.Context) error {
 	}
 
 	e.SetState(environment.ProcessStartingState)
+
+	// If VictoriaLogs is enabled, we'll run a background process to grab all of the
+	// existing logs for the server and ship them along. This ensures that we have
+	// a complete history of the logs for the server even if we weren't attached
+	// for a period of time.
+	if vl := victorialogs.GetGlobal(); vl != nil {
+		go func() {
+			logs, err := e.Readlog(0)
+			if err != nil {
+				e.log().WithField("error", err).Warn("failed to read existing server logs for victorialogs ingestion")
+				return
+			}
+
+			e.log().WithField("lines", len(logs)).Debug("forwarding historical logs to victorialogs")
+
+			name := "unknown"
+			if e.Configuration != nil {
+				name = e.Configuration.GetEnvironmentVariable("SERVER_NAME")
+			}
+
+			for _, line := range logs {
+				vl.Log(e.Id, e.Id, name, line, nil)
+			}
+		}()
+	}
 
 	// Set this to true for now, we will set it to false once we reach the
 	// end of this chain.
