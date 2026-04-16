@@ -115,7 +115,7 @@ func (c *Client) sendBatch(logs []*LogEntry) error {
 		buf.WriteByte('\n')
 	}
 
-	req, err := http.NewRequest("POST", c.config.URL+"/insert/jsonline?_msg_field=message&_time_field=timestamp&_stream_fields=service,environment,container_id,server_uuid", &buf)
+	req, err := http.NewRequest("POST", c.config.URL+"/insert/jsonline?_msg_field=message&_time_field=timestamp&_stream_fields=service,environment,container_id,server_uuid&decolorize_fields=msg,message,log", &buf)
 	if err != nil {
 		return err
 	}
