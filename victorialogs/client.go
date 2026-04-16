@@ -8,10 +8,44 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
 )
+
+var levelRegex = regexp.MustCompile(`(?i)\b(trace|debug|dbg|info|ifo|lvl|notice|warn|warning|error|err|critical|crit|fatal|severe)\b`)
+
+func parseLevel(message string) string {
+	matches := levelRegex.FindStringSubmatch(message)
+	if len(matches) < 2 {
+		return "info"
+	}
+
+	level := strings.ToLower(matches[1])
+
+	// Normalize to standard levels
+	switch level {
+	case "trace":
+		return "trace"
+	case "debug", "dbg":
+		return "debug"
+	case "info", "ifo", "lvl":
+		return "info"
+	case "notice":
+		return "notice"
+	case "warn", "warning":
+		return "warning"
+	case "error", "err":
+		return "error"
+	case "critical", "crit":
+		return "critical"
+	case "fatal", "severe":
+		return "fatal"
+	default:
+		return "info"
+	}
+}
 
 type Client struct {
 	config   *Config
@@ -145,7 +179,7 @@ func (c *Client) Log(containerID, serverUUID, serverName, message string, extra 
 
 	entry := &LogEntry{
 		Timestamp:   time.Now().UTC().Format(time.RFC3339Nano),
-		Level:       "info",
+		Level:       parseLevel(message),
 		Message:     message,
 		Service:     "wings",
 		Environment: c.config.Environment,
